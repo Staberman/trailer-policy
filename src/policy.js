@@ -48,8 +48,10 @@ export function repoRoot(cwd) {
 }
 
 /**
- * Precedence, lowest to highest: defaults, .ai-policy, git config
- * (trailerPolicy.*, local over global), explicit overrides (CLI flags).
+ * Precedence, lowest to highest: defaults, global git config (personal
+ * default), the committed .ai-policy (the repo's rule), local git config
+ * (explicit per-clone choice), explicit overrides (CLI flags).
+ * Scopes are read separately; the merged git lookup is never used.
  */
 export function resolvePolicy(cwd, overrides = {}) {
   const root = repoRoot(cwd);
@@ -65,6 +67,12 @@ export function resolvePolicy(cwd, overrides = {}) {
       }
     }
   };
+  const gitScope = (scope) => ({
+    mode: git(['config', `--${scope}`, '--get', 'trailerPolicy.mode'], cwd),
+    disclosure: git(['config', `--${scope}`, '--get', 'trailerPolicy.disclosure'], cwd),
+    pattern: git(['config', `--${scope}`, '--get', 'trailerPolicy.pattern'], cwd),
+  });
+  apply(gitScope('global'), 'git config (global)');
   let hasFile = false;
   if (fs.existsSync(file)) {
     hasFile = true;
@@ -72,14 +80,7 @@ export function resolvePolicy(cwd, overrides = {}) {
     warnings.push(...parsed.warnings);
     apply(parsed.values, POLICY_FILE);
   }
-  apply(
-    {
-      mode: git(['config', '--get', 'trailerPolicy.mode'], cwd),
-      disclosure: git(['config', '--get', 'trailerPolicy.disclosure'], cwd),
-      pattern: git(['config', '--get', 'trailerPolicy.pattern'], cwd),
-    },
-    'git config',
-  );
+  apply(gitScope('local'), 'git config (local)');
   apply(overrides, 'flag');
   policy.mode = String(policy.mode).toLowerCase();
   if (!MODES.includes(policy.mode)) {

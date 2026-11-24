@@ -38,7 +38,7 @@ test('no policy anywhere means mode off', () => {
   assert.equal(resolvePolicy(r.dir).mode, 'off');
 });
 
-test('precedence: file < git config < flag', (t) => {
+test('precedence: global < file < local < flag', (t) => {
   const r = tempRepo();
   const saved = { ...process.env };
   const env = envFor(r.home);
@@ -52,8 +52,8 @@ test('precedence: file < git config < flag', (t) => {
   assert.equal(p.sources.mode, '.ai-policy');
   r.git('config', '--global', 'trailerPolicy.mode', 'strip');
   p = resolvePolicy(r.dir);
-  assert.equal(p.mode, 'strip');
-  assert.equal(p.sources.mode, 'git config');
+  assert.equal(p.mode, 'ban'); // global strip loses to the committed file
+  assert.equal(p.sources.mode, '.ai-policy');
   r.git('config', '--local', 'trailerPolicy.mode', 'require');
   r.git('config', '--local', 'trailerPolicy.disclosure', 'AI-used: <tool>');
   p = resolvePolicy(r.dir);
@@ -99,4 +99,44 @@ test('mode require honours a custom pattern', () => {
   const custom = pol('require', { regex: /^AI-used: .+$/i });
   assert.equal(evaluate('fix\n\nAssisted-by: Claude Code\n', custom).ok, false);
   assert.equal(evaluate('fix\n\nAssisted-by: Claude Code\nAI-used: claude\n', custom).ok, true);
+});
+
+test('global strip plus repo .ai-policy require gives require', (t) => {
+  const r = tempRepo();
+  const saved = { ...process.env };
+  const env = envFor(r.home);
+  Object.assign(process.env, { HOME: env.HOME, GIT_CONFIG_GLOBAL: env.GIT_CONFIG_GLOBAL, GIT_CONFIG_NOSYSTEM: '1' });
+  t.after(() => {
+    process.env = saved;
+  });
+  r.git('config', '--global', 'trailerPolicy.mode', 'strip');
+  fs.writeFileSync(path.join(r.dir, '.ai-policy'), 'mode: require\n');
+  assert.equal(resolvePolicy(r.dir).mode, 'require');
+});
+
+test('local config overrides .ai-policy', (t) => {
+  const r = tempRepo();
+  const saved = { ...process.env };
+  const env = envFor(r.home);
+  Object.assign(process.env, { HOME: env.HOME, GIT_CONFIG_GLOBAL: env.GIT_CONFIG_GLOBAL, GIT_CONFIG_NOSYSTEM: '1' });
+  t.after(() => {
+    process.env = saved;
+  });
+  fs.writeFileSync(path.join(r.dir, '.ai-policy'), 'mode: require\n');
+  r.git('config', '--local', 'trailerPolicy.mode', 'off');
+  const p = resolvePolicy(r.dir);
+  assert.equal(p.mode, 'off');
+  assert.equal(p.sources.mode, 'git config (local)');
+});
+
+test('without .ai-policy the global value applies', (t) => {
+  const r = tempRepo();
+  const saved = { ...process.env };
+  const env = envFor(r.home);
+  Object.assign(process.env, { HOME: env.HOME, GIT_CONFIG_GLOBAL: env.GIT_CONFIG_GLOBAL, GIT_CONFIG_NOSYSTEM: '1' });
+  t.after(() => {
+    process.env = saved;
+  });
+  r.git('config', '--global', 'trailerPolicy.mode', 'strip');
+  assert.equal(resolvePolicy(r.dir).mode, 'strip');
 });

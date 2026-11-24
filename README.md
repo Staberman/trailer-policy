@@ -43,14 +43,21 @@ disclosure: Assisted-by: <tool>
 
 Only `key: value` lines and `#` comments are read. Comments must be on their own line (or quote the value).
 
-Local overrides, per repo or in your global git config, win over the file:
+Precedence, lowest to highest:
+
+1. your global git config (a personal default)
+2. the committed `.ai-policy` (the repo's rule)
+3. the repo's local git config (an explicit choice for this clone)
+4. `--mode <mode>` on the command line
+
+So a personal default never overrides what a repo asks for, but you can still override a repo in your own clone:
 
 ```sh
-git config trailerPolicy.mode strip
-git config --global trailerPolicy.disclosure "AI-used: <tool>"
+git config --global trailerPolicy.mode strip                     # default for repos without .ai-policy
+git config --local trailerPolicy.disclosure "AI-used: <tool>"    # this clone only
 ```
 
-`--mode <mode>` on the command line wins over both. With no policy anywhere the mode is `off`.
+With no policy anywhere the mode is `off`.
 
 ## Modes
 

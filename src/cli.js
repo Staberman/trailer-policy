@@ -18,9 +18,9 @@ Usage:
   trailer-policy init [--mode <mode>] [--force]
 
 Modes: off | strip | require | ban
-Policy comes from .ai-policy at the repo root, overridden by
-git config trailerPolicy.mode / trailerPolicy.disclosure / trailerPolicy.pattern
-(local over global), overridden by --mode.
+Policy precedence, lowest to highest: global git config, .ai-policy at the
+repo root, local git config (keys trailerPolicy.mode / .disclosure / .pattern),
+then --mode.
 
 Exit codes: 0 ok, 1 policy violation, 2 error or bad usage.
 `;
