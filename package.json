@@ -1,0 +1,14 @@
+{
+  "name": "trailer-policy",
+  "version": "0.1.0",
+  "description": "Per-repo policy for AI attribution in commit messages and PR bodies: strip it, require a disclosure line, or ban it.",
+  "type": "module",
+  "bin": { "trailer-policy": "bin/trailer-policy.js" },
+  "files": ["bin", "src", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node --test test/*.test.js" },
+  "keywords": ["git", "commit-msg", "hook", "co-authored-by", "ai", "claude-code", "codex", "attribution", "policy"],
+  "license": "MIT",
+  "author": "Lautaro Antúnez <redes@staberman.com.ar>",
+  "repository": { "type": "git", "url": "git+https://github.com/Staberman/trailer-policy.git" }
+}
